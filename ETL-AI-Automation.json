@@ -1,0 +1,186 @@
+{
+  "name": "ETL AI Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "File Upload",
+        "formDescription": "Upload the Student Data",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "File Upload",
+              "fieldType": "file"
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -592,
+        -16
+      ],
+      "id": "6bfbd1c8-76ad-448d-b486-a3454eda288e",
+      "name": "CSV Upload",
+      "webhookId": "baeb72d4-9805-4374-914f-2e9dc5c0a48b"
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "File_Upload",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -368,
+        -16
+      ],
+      "id": "b3a88e80-ac59-42ed-81ba-548e5a2c9d83",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -192,
+        208
+      ],
+      "id": "95ef9eab-2ce9-4d5c-b268-161963bca5e3",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "rfSXp0hnZB0Zq3yI",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Clean this student enrollment row and return ONLY a JSON object.\n\nRow data: {{ JSON.stringify($json) }}\n\nRules:\n\nName: Title case (Mary K)\nEmail: If invalid set INVALID_EMAIL\nPhone: If less than 10 digits set MISSING\nCourse: Only Python or Machine Learning or Data Science\nFee_Paid: yes/YES = true, no/NO = false\nCity: Title Case, empty = UNKNOWN\nEnroll_Date: YYYY-MM-DD\n\nReturn only the JSON, no explanation.No Markdown",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -144,
+        -16
+      ],
+      "id": "7db4491e-f814-4efc-a150-cbd0cf0f0107",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map((item, index) => {\nlet raw = item.json.output ?? item.json.text ?? item.json.response ?? item.json;\n\nif (typeof raw === 'object' && raw !== null) {\nreturn {\njson: raw\n};\n}\n\nraw = String(raw).trim();\n\nraw = raw\n.replace(/^json\\s*/i, '') .replace(/^\\s*/i, '')\n.replace(/\\s*```$/i, '')\n.trim();\n\ntry {\nreturn {\njson: JSON.parse(raw)\n};\n} catch (error) {\nconst start = raw.indexOf('{');\nconst end = raw.lastIndexOf('}');\n\n}\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        -16
+      ],
+      "id": "895c2404-c47f-4f47-8e3f-398069520abe",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        -16
+      ],
+      "id": "b286c9f9-6f7d-4636-ba85-9e86555ded5e",
+      "name": "Convert to File"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "CSV Upload": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "05b8067a-432e-49f8-8499-213e103fd103",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f9561fedbb53454a50678bdb63d20087b01487749cc08014df884681a342aca0"
+  },
+  "nodeGroups": [],
+  "id": "skxqTERsUjCDcpi2",
+  "tags": []
+}
